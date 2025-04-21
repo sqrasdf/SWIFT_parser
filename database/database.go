@@ -14,9 +14,9 @@ import (
 	"swift_parser/models"
 )
 
-func ConnectWithDatabase() (*pgxpool.Pool, error) {
+func ConnectWithDatabase(sql_path string, csv_path string, env_path string) (*pgxpool.Pool, error) {
 	// Load env variables
-	godotenv.Load()
+	godotenv.Load(env_path)
 	dbUser := os.Getenv("DB_USER")
 	dbPort := os.Getenv("DB_PORT")
 	dbHost := os.Getenv("DB_HOST")
@@ -24,7 +24,7 @@ func ConnectWithDatabase() (*pgxpool.Pool, error) {
 	dbPassword := os.Getenv("DB_PASSWORD")
 
 	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", dbUser, dbPassword, dbHost, dbPort, dbName)
-
+	fmt.Println("dbURL" + dbURL + "\n\n\n")
 	dbpool, err := pgxpool.New(context.Background(), dbURL)
 	if err != nil {
 		log.Fatalf("Could not connect with database: %v", err)
@@ -39,7 +39,10 @@ func ConnectWithDatabase() (*pgxpool.Pool, error) {
 	}
 
 	// Create database with sql file
-	err = executeSQLFile(context.Background(), dbpool, "database/schema.sql")
+	// err = executeSQLFile(context.Background(), dbpool, "schema.sql")
+	dir, _ := os.Getwd()
+	fmt.Println("Working directory:", dir)
+	err = executeSQLFile(context.Background(), dbpool, sql_path)
 	if err == nil {
 		fmt.Println("SQL file executed correctly")
 	}
@@ -49,7 +52,8 @@ func ConnectWithDatabase() (*pgxpool.Pool, error) {
 	fmt.Println("Connected with database PostgreSQL")
 
 	// Read data from csv file
-	hqMap, branches := parseCSV("data_csv/SWIFT_CODES.csv")
+	// hqMap, branches := parseCSV("SWIFT_CODES.csv")
+	hqMap, branches := parseCSV(csv_path)
 
 	// Insert headquarters to database
 	licznik_bledow := 0

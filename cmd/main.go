@@ -16,7 +16,7 @@ import (
 func main() {
 
 	// Initialize database
-	dbpool, err := database.ConnectWithDatabase()
+	dbpool, err := database.ConnectWithDatabase("database/schema.sql", "data_csv/SWIFT_CODES.csv", ".env")
 	if err != nil {
 		log.Fatalf("Error connecting with database: %v", err)
 	}
