@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:13-alpine
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: swift_db
+
+  test:
+    image: golang:1.24-alpine
+
+    # build: .
+    depends_on:
+      - db
+    working_dir: /app
+    environment:
+      DB_USER: postgres
+      DB_PASSWORD: root
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: demodb
+    volumes:
+      - ./:/app
+    command: ["go", "test", "-v", "./..."]
+
+volumes:
+  db_data:

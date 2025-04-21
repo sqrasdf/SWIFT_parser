@@ -1,0 +1,28 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      DB_USER: postgres
+      DB_PASSWORD: root
+      DB_HOST: db # zamiast localhost
+      DB_PORT: 5432 # port wewnetrzny bazy
+      DB_NAME: demodb
+    volumes:
+      - ./data_csv:/app/data_csv
+      - ./database:/app/database
+
+  db:
+    image: postgres:13-alpine
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: demodb
+
+volumes:
+  db_data:

@@ -76,7 +76,7 @@ func ConnectWithDatabase(sql_path string, csv_path string, env_path string) (*pg
 		if err != nil {
 			licznik_bledow++
 			// log.Printf("Błąd zapisu oddziału %s: %v", br.SwiftCode, err)
-			log.Printf("Error - inserting branch %s", br.SwiftCode)
+			// log.Printf("Error - inserting branch %s", br.SwiftCode)
 		}
 	}
 
@@ -168,7 +168,16 @@ func insertHeadquarter(ctx context.Context, db *pgxpool.Pool, hq *models.Headqua
 }
 
 func insertBranch(ctx context.Context, db *pgxpool.Pool, br *models.Branch) error {
-	_, err := db.Exec(ctx, `
+	var exists bool
+	err := db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM headquarters WHERE swift_code=$1)", br.HQSwiftCode).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("error when checking headquarters: %w", err)
+	}
+	if !exists {
+		return fmt.Errorf("headquarters with code %s doesn't exist", br.HQSwiftCode)
+	}
+
+	_, err = db.Exec(ctx, `
         INSERT INTO branches (swift_code, hq_swift_code, bank_name, country_iso2, country_name, address)
         VALUES ($1, $2, $3, $4, $5, $6)
         ON CONFLICT (swift_code) DO UPDATE SET
