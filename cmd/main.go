@@ -15,17 +15,16 @@ import (
 
 func main() {
 
-	// Inicjalizacja bazy danych
+	// Initialize database
 	dbpool, err := database.ConnectWithDatabase()
 	if err != nil {
 		log.Fatalf("Error connecting with database: %v", err)
 	}
 
-	// Inicjalizacja routera Gin
+	// Initialize router
 	r := gin.New()
 	r.SetTrustedProxies([]string{"localhost"})
 
-	// Endpointy
 	r.GET("/", func(c *gin.Context) {
 		fmt.Println("DB_NAME", os.Getenv("DB_NAME"))
 		c.String(http.StatusOK, "hello world")
@@ -35,17 +34,18 @@ func main() {
 	r.POST("/v1/swift-codes", handlers.PostSwiftCode(dbpool))
 	r.DELETE("/v1/swift-codes/:swift-code", handlers.DeleteSwiftCode(dbpool))
 
+	// Signal closing connection with database
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
 		<-sigchan
-		log.Println("Otrzymano sygnał zakończenia, zamykanie połączenia z bazą danych...")
+		log.Println("Closing connection with database...")
 		dbpool.Close()
-		log.Println("Połączenie z bazą danych zamknięte.")
+		log.Println("Connection with database has been closed")
 		os.Exit(0)
 	}()
 
-	// Uruchomienie serwera
+	// Run server
 	r.Run(":8080")
 }

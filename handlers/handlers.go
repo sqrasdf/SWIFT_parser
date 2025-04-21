@@ -89,7 +89,6 @@ func GetSWIFTCodesByCountry(dbpool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		countryISO2 := strings.ToUpper(c.Param("countryISO2code"))
 
-		// Pobierz centrale
 		hqRows, _ := dbpool.Query(context.Background(), `
 		SELECT swift_code, bank_name, country_iso2, country_name, address
 		FROM headquarters
@@ -116,7 +115,6 @@ func GetSWIFTCodesByCountry(dbpool *pgxpool.Pool) gin.HandlerFunc {
 			})
 		}
 
-		// Pobierz oddziały
 		branchRows, _ := dbpool.Query(context.Background(), `
 		SELECT swift_code, bank_name, country_iso2, country_name, address
 		FROM branches
@@ -153,43 +151,39 @@ func PostSwiftCode(dbpool *pgxpool.Pool) gin.HandlerFunc {
 		var req models.SwiftCodeRequest
 
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Niepoprawne dane wejściowe: " + err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data: " + err.Error()})
 			return
 		}
 
-		// Normalizacja
+		// Data normalization
 		req.SwiftCode = strings.ToUpper(req.SwiftCode)
 		req.CountryISO2 = strings.ToUpper(req.CountryISO2)
 		req.CountryName = strings.ToUpper(req.CountryName)
 
-		// Walidacja długości i formatu SWIFT
 		if len(req.SwiftCode) != 11 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Kod SWIFT musi mieć dokładnie 11 znaków"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "SWIFT code must be 11 characters long"})
 			return
 		}
 
 		if !isValidSwiftCodeFormat(req.SwiftCode) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Kod SWIFT zawiera niedozwolone znaki"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "SWIFT code contains invalid characters"})
 			return
 		}
 
-		// Sprawdzenie flagi isHeadquarter i końcówki kodu
 		isHQ := strings.HasSuffix(req.SwiftCode, "XXX")
 		if req.IsHeadquarter != isHQ {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Flaga isHeadquarter nie zgadza się z końcówką kodu SWIFT"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "SWIFT code of headquarter must end with 'XXX'"})
 			return
 		}
 
-		// Sprawdzenie obowiązkowych pól
 		if strings.TrimSpace(req.BankName) == "" || strings.TrimSpace(req.Address) == "" || len(req.CountryISO2) != 2 || strings.TrimSpace(req.CountryName) == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Wszystkie pola muszą być wypełnione i poprawne"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "All fields have to be valid"})
 			return
 		}
 
 		ctx := context.Background()
 
 		if req.IsHeadquarter {
-			// Dodaj centralę
 			_, err := dbpool.Exec(ctx, `
 			INSERT INTO headquarters (swift_code, bank_name, country_iso2, country_name, address)
 			VALUES ($1, $2, $3, $4, $5)
@@ -201,20 +195,19 @@ func PostSwiftCode(dbpool *pgxpool.Pool) gin.HandlerFunc {
 				req.SwiftCode, req.BankName, req.CountryISO2, req.CountryName, req.Address)
 
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Błąd zapisu do bazy: " + err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error: " + err.Error()})
 				return
 			}
 		} else {
-			// Sprawdź istnienie centrali
 			hqSwiftCode := req.SwiftCode[:8] + "XXX"
 			exists, err := checkHeadquarterExists(ctx, dbpool, hqSwiftCode)
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Błąd bazy danych: " + err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error: " + err.Error()})
 				return
 			}
 
 			if !exists {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Nie istnieje centrala o kodzie " + hqSwiftCode})
+				c.JSON(http.StatusBadRequest, gin.H{"error": "No headquarter with code " + hqSwiftCode})
 				return
 			}
 
@@ -229,12 +222,12 @@ func PostSwiftCode(dbpool *pgxpool.Pool) gin.HandlerFunc {
 				req.SwiftCode, hqSwiftCode, req.BankName, req.CountryISO2, req.CountryName, req.Address)
 
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Błąd zapisu do bazy: " + err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error: " + err.Error()})
 				return
 			}
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "Kod SWIFT zapisany pomyślnie"})
+		c.JSON(http.StatusOK, gin.H{"message": "SWIFT code saved successfully"})
 	}
 }
 
@@ -255,10 +248,8 @@ func DeleteSwiftCode(dbpool *pgxpool.Pool) gin.HandlerFunc {
 		var err error
 
 		if isHQ {
-			// Usuwamy centralę i kaskadowo oddziały (ON DELETE CASCADE)
 			cmdTag, err = dbpool.Exec(ctx, `DELETE FROM headquarters WHERE swift_code=$1`, swiftCode)
 		} else {
-			// Usuwamy oddział
 			cmdTag, err = dbpool.Exec(ctx, `DELETE FROM branches WHERE swift_code=$1`, swiftCode)
 		}
 
@@ -276,7 +267,6 @@ func DeleteSwiftCode(dbpool *pgxpool.Pool) gin.HandlerFunc {
 	}
 }
 
-// Funkcja sprawdzająca format kodu SWIFT
 func isValidSwiftCodeFormat(code string) bool {
 	for _, r := range code {
 		if !(r >= 'A' && r <= 'Z') && !(r >= '0' && r <= '9') {
@@ -286,7 +276,6 @@ func isValidSwiftCodeFormat(code string) bool {
 	return true
 }
 
-// Sprawdzenie istnienia centrali w bazie
 func checkHeadquarterExists(ctx context.Context, db *pgxpool.Pool, swiftCode string) (bool, error) {
 	var exists bool
 	err := db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM headquarters WHERE swift_code=$1)", swiftCode).Scan(&exists)

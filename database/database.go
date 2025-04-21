@@ -15,8 +15,8 @@ import (
 )
 
 func ConnectWithDatabase() (*pgxpool.Pool, error) {
+	// Load env variables
 	godotenv.Load()
-
 	dbUser := os.Getenv("DB_USER")
 	dbPort := os.Getenv("DB_PORT")
 	dbHost := os.Getenv("DB_HOST")
@@ -31,39 +31,39 @@ func ConnectWithDatabase() (*pgxpool.Pool, error) {
 		return nil, err
 	}
 
-	// Test połączenia
+	// Test connection
 	err = dbpool.Ping(context.Background())
 	if err != nil {
-		log.Fatalf("Błąd pingowania bazy: %v", err)
+		log.Fatalf("Error when pinging: %v", err)
 		return nil, err
 	}
 
-	// wczytanie pliku sql i utworzenie bazy danych
+	// Create database with sql file
 	err = executeSQLFile(context.Background(), dbpool, "database/schema.sql")
 	if err == nil {
-		fmt.Println("chyba nie ma bledu przy wczytywaniu pliku sql")
+		fmt.Println("SQL file executed correctly")
 	}
 	if err != nil {
-		log.Fatalf("Błąd wykonania skryptu SQL: %v", err)
+		log.Fatalf("Error when executing SQL file: %v", err)
 	}
-	fmt.Println("Połączono z bazą PostgreSQL")
+	fmt.Println("Connected with database PostgreSQL")
 
-	// wczytywanie danych z pliku csv
+	// Read data from csv file
 	hqMap, branches := parseCSV("data_csv/SWIFT_CODES.csv")
 
-	// Zapisz centrale
+	// Insert headquarters to database
 	licznik_bledow := 0
 	for _, hq := range hqMap {
 		err := insertHeadquarter(context.Background(), dbpool, &hq)
 		if err != nil {
 			licznik_bledow++
-			log.Fatalf("Błąd zapisu centrali: %v", err)
+			log.Fatalf("Error - inserting headquarter: %v", err)
 		}
 	}
 
 	fmt.Println("headquarters bledy:", licznik_bledow)
 
-	// Zapisz oddziały
+	// Insert branches to database
 	for _, br := range branches {
 		if br.HQSwiftCode == "" {
 			continue
@@ -72,7 +72,7 @@ func ConnectWithDatabase() (*pgxpool.Pool, error) {
 		if err != nil {
 			licznik_bledow++
 			// log.Printf("Błąd zapisu oddziału %s: %v", br.SwiftCode, err)
-			log.Printf("Błąd zapisu oddziału %s", br.SwiftCode)
+			log.Printf("Error - inserting branch %s", br.SwiftCode)
 		}
 	}
 
@@ -100,7 +100,7 @@ func parseCSV(filename string) (map[string]models.Headquarter, []models.Branch) 
 
 	reader := csv.NewReader(file)
 	reader.Comma = ','
-	reader.LazyQuotes = true // pomaga w adresach z przecinkami
+	reader.LazyQuotes = true
 
 	records, err := reader.ReadAll()
 	if err != nil {
@@ -110,20 +110,20 @@ func parseCSV(filename string) (map[string]models.Headquarter, []models.Branch) 
 	hqMap := make(map[string]models.Headquarter)
 	var branches []models.Branch
 
-	// Pomijamy nagłówek
+	// Skipping row names
 	for _, record := range records[1:] {
 		if len(record) < 8 {
 			continue
 		}
 
-		// Normalizacja danych
+		// Data normalization
 		countryISO2 := strings.ToUpper(record[0])
 		swiftCode := record[1]
 		bankName := record[3]
 		address := strings.TrimSpace(record[4])
 		countryName := strings.ToUpper(record[6])
 
-		// Sprawdź czy to centrala
+		// Checking if it is headquarter
 		if len(swiftCode) == 11 && strings.HasSuffix(swiftCode, "XXX") {
 			hq := models.Headquarter{
 				SwiftCode:   swiftCode,
@@ -134,7 +134,7 @@ func parseCSV(filename string) (map[string]models.Headquarter, []models.Branch) 
 			}
 			hqMap[swiftCode] = hq
 		} else {
-			// Dla oddziałów znajdź odpowiadającą centralę
+			// Find headquarter for branch
 			hqSwift := swiftCode[:8] + "XXX"
 			branches = append(branches, models.Branch{
 				SwiftCode:   swiftCode,
