@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
@@ -32,10 +33,17 @@ func ConnectWithDatabase(sql_path string, csv_path string, env_path string) (*pg
 	}
 
 	// Test connection
-	err = dbpool.Ping(context.Background())
-	if err != nil {
-		log.Fatalf("Error when pinging: %v", err)
-		return nil, err
+	for i := range 10 {
+		err = dbpool.Ping(context.Background())
+		if err != nil {
+			log.Fatalf("Error when pinging: %v", err)
+			return nil, err
+		}
+		if err == nil {
+			break
+		}
+		fmt.Println("pinging again, i: ", i)
+		time.Sleep(1 * time.Second)
 	}
 
 	// Create database with sql file

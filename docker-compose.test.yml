@@ -3,27 +3,35 @@ services:
     image: postgres:13-alpine
     volumes:
       - db_data:/var/lib/postgresql/data
+    networks:
+      - mynetwork
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: mysecretpassword
-      POSTGRES_DB: swift_db
+      POSTGRES_USER: postgres1
+      POSTGRES_PASSWORD: root1
+      POSTGRES_DB: demodb1
+    ports:
+      - "5432:5432"
 
   test:
     image: golang:1.24-alpine
-
+    networks:
+      - mynetwork
     # build: .
     depends_on:
       - db
     working_dir: /app
     environment:
-      DB_USER: postgres
-      DB_PASSWORD: root
+      DB_USER: postgres1
+      DB_PASSWORD: root1
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: demodb
+      DB_NAME: demodb1
     volumes:
       - ./:/app
-    command: ["go", "test", "-v", "./..."]
-
+    # command: ["go", "test", "-v", "./..."]
+    command: /bin/sh -c "go mod download && go test -v ./..."
+networks:
+  mynetwork:
+    driver: bridge
 volumes:
   db_data:
