@@ -15,17 +15,13 @@ This is a simple REST API for managing SWIFT codes, built with Go, Gin, and Post
 
     ```
     git clone https://github.com/sqrasdf/SWIFT_parser/
+
+    ```
+
+2.  Enter project folder
+
+    ```
     cd SWIFT_parser
-    ```
-
-2.  Adjust environment variables in `docker-compose.yml`:
-
-    ```
-    DB_USER=postgres
-    DB_PASSWORD=mysecretpassword
-    DB_HOST=db
-    DB_PORT=5432
-    DB_NAME=swift_db
     ```
 
 ## Running the Application
@@ -114,7 +110,7 @@ To run tests, you can use the following command:
 docker-compose -f docker-compose.test.yml up --build
 ```
 
-This command will run all tests in the project. Make sure that the test database is properly configured before running the tests.
+This command will run all tests in the project. Running it for the first time may take a little while.
 
 ## Notes
 
