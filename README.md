@@ -102,7 +102,7 @@ This is a simple REST API for managing SWIFT codes, built with Go, Gin, and Post
   curl -X DELETE http://localhost:8080/v1/swift-codes/CITIBGSFTRD
   ```
 
-## Testing
+### Testing
 
 To run tests, you can use the following command:
 
@@ -112,7 +112,10 @@ docker-compose -f docker-compose.test.yml up --build
 
 This command will run all tests in the project. Running it for the first time may take a little while.
 
-## Notes
+## Stopping and Cleaning Up
 
-- Make sure the `database/schema.sql` and `data_csv/SWIFT_CODES.csv` files are in the correct locations.
-- Adjust the environment variables in `docker-compose.yml` or `.env` file according to your needs.
+To stop the application, you can either press `CTRL+C` in the terminal or run the following command:
+
+```
+docker compose down
+```
